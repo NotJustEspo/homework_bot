@@ -13,8 +13,8 @@ from telegram import Bot
 
 load_dotenv()
 
-PRACTICUM_TOKEN = os.getenv('SECRET_PRACTICUM_TOKEN')
-TELEGRAM_TOKEN = os.getenv('SECRET_TELEGRAM_TOKEN')
+PRACTICUM_TOKEN = os.getenv('SECRET_PRACTICUM_TOKE')
+TELEGRAM_TOKEN = os.getenv('SECRET_TELEGRAM_TOKE')
 TELEGRAM_CHAT_ID = os.getenv('SECRET_TELEGRAM_CHAT_ID')
 
 RETRY_PERIOD = 600
@@ -51,13 +51,13 @@ def check_tokens():
     names = []
     for name, token in TOKENS.items():
         if not token:
-            logger.critical(
-                f'Отсутствует обязательная переменная окружения: "{name}"'
-            )
             names.append(name)
     if not names:
         logger.debug('Проверка переменных окружения пройдена успешно')
     else:
+        logger.critical(
+            f'Отсутствует обязательная(ые) переменная(ые) окружения: {names}'
+        )
         raise SystemExit('Ошибка проверки переменных окружения')
 
 
