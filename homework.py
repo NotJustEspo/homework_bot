@@ -13,8 +13,8 @@ from telegram import Bot
 
 load_dotenv()
 
-PRACTICUM_TOKEN = os.getenv('SECRET_PRACTICUM_TOKE')
-TELEGRAM_TOKEN = os.getenv('SECRET_TELEGRAM_TOKE')
+PRACTICUM_TOKEN = os.getenv('SECRET_PRACTICUM_TOKEN')
+TELEGRAM_TOKEN = os.getenv('SECRET_TELEGRAM_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('SECRET_TELEGRAM_CHAT_ID')
 
 RETRY_PERIOD = 600
@@ -52,13 +52,12 @@ def check_tokens():
     for name, token in TOKENS.items():
         if not token:
             names.append(name)
-    if not names:
-        logger.debug('Проверка переменных окружения пройдена успешно')
-    else:
+    if names:
         logger.critical(
             f'Отсутствует обязательная(ые) переменная(ые) окружения: {names}'
         )
         raise SystemExit('Ошибка проверки переменных окружения')
+    logger.debug('Проверка переменных окружения пройдена успешно')
 
 
 def send_message(bot, message):
@@ -77,7 +76,7 @@ def get_api_answer(timestamp):
             params=payload
         )
     except requests.RequestException as error:
-        raise Exception(f'Ошибка - {error}')
+        raise ConnectionError(f'Ошибка при отправке запроса к API - {error}')
     if homework_statuses.status_code != HTTPStatus.OK:
         raise ValueError(f'Ошбика доступа к {ENDPOINT}, '
                          f'ошибка - {homework_statuses.status_code}, '
@@ -132,13 +131,12 @@ def main():
                 logger.debug('За запрошенный период не изменился статус '
                              'проверки. Домашка еще на проверке.')
                 continue
+            message = parse_status(homeworks[0])
+            if last_message != message:
+                send_message(bot, message)
+                last_message = message
             else:
-                message = parse_status(homeworks[0])
-                if last_message != message:
-                    send_message(bot, message)
-                    last_message = message
-                else:
-                    logger.debug('Статус дз не изменился.')
+                logger.debug('Статус дз не изменился.')
             timestamp = response.get('current_date', timestamp)
         except TelegramError as error:
             logger.error(f'Ошбика при попытке отправке сообщения - {error}')
@@ -146,7 +144,7 @@ def main():
             message = f'Сбой в работе программы: {error}'
             logger.error(message, exc_info=True)
             if last_message != message:
-                with suppress(Exception):
+                with suppress(TelegramError):
                     send_message(bot, message)
                     last_message = message
         finally:
